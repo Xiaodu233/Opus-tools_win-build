@@ -1,0 +1,54 @@
+name: Opus Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Cross-Compilation Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 pkg-config autoconf automake libtool make zip
+
+      - name: Checkout opus-tools
+        uses: actions/checkout@main
+        with:
+          repository: xiph/opus-tools
+          path: opus-tools
+
+      - name: Checkout libopus
+        uses: actions/checkout@main
+        with:
+          repository: xiph/opus
+          ref: 'main'
+          path: opus-lib
+
+      - name: Create Output Folders
+        run: |
+          mkdir -p build_output/Win64
+
+      - name: Build Win64 (libopus + opus-tools)
+        run: |
+          cd ${{ github.workspace }}/opus-lib
+          ./autogen.sh
+          ./configure --host=x86_64-w64-mingw32 --prefix=$(pwd)/dist-win64 \
+                      --enable-static --disable-shared --enable-osce --enable-dred \
+                      CFLAGS="-O2" || cat config.log
+          make -j$(nproc) && make install
+          
+          cd ${{ github.workspace }}/opus-tools
+          ./autogen.sh
+          export PKG_CONFIG_PATH=${{ github.workspace }}/opus-lib/dist-win64/lib/pkgconfig
+          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2" || cat config.log
+          make -j$(nproc)
+          cp *.exe ${{ github.workspace }}/build_output/Win64/
+          make clean
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: opus-tools-binaries
+          path: build_output/
