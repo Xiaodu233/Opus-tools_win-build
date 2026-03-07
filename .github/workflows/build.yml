@@ -1,4 +1,4 @@
-name: Opus Build
+name: Opus-tools Win64 Build
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install Cross-Compilation Toolchain
+      - name: Install Toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y mingw-w64 pkg-config autoconf automake libtool make zip
@@ -24,36 +24,43 @@ jobs:
           cd ogg
           ./autogen.sh
           ./configure --host=x86_64-w64-mingw32 \
-                      --prefix=${{ github.workspace }}/local_dist \
-                      --enable-static --disable-shared
-          make -j$(nproc) && make install
+          --prefix=${{ github.workspace }}/local_dist \
+          --enable-static --disable-shared
+          make -j$(nproc) install
 
       - name: Build libopus (Win64)
         run: |
-          git clone --depth 1 https://github.com/xiph/opus.git opus-lib
+          git clone https://github.com/xiph/opus.git opus-lib
           cd opus-lib
+          
+          GIT_VER=$(git describe --tags --always --dirty)
+          echo "Building libopus version: $GIT_VER"
+          echo "$GIT_VER" > .tarball-version
+          
           ./autogen.sh
           ./configure --host=x86_64-w64-mingw32 \
                       --prefix=${{ github.workspace }}/local_dist \
                       --enable-static --disable-shared \
                       --enable-osce --enable-dred \
-                      CFLAGS="-O2 -mavx2" || cat config.log
-          make -j$(nproc) && make install
+                      CFLAGS="-O2 -mavx2"
+          make -j$(nproc) install
 
       - name: Build opus-tools (Win64)
         run: |
-          git clone --depth 1 https://github.com/xiph/opus-tools.git
+          git clone https://github.com/xiph/opus-tools.git
           cd opus-tools
+          
+          GIT_VER=$(git describe --tags --always --dirty)
+          echo "Building opus-tools version: $GIT_VER"
+          echo "$GIT_VER" > .tarball-version
+          
           ./autogen.sh
-          
           export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
-          export LDFLAGS="-L${{ github.workspace }}/local_dist/lib"
-          export CPPFLAGS="-I${{ github.workspace }}/local_dist/include"
           
-          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2 -mavx2"
+          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2 -mavx2" LDFLAGS="-static"
           make -j$(nproc)
-          
-          cp *.exe ${{ github.workspace }}/build_output/Win64/
+
+          cp opusenc.exe opusdec.exe opusinfo.exe ${{ github.workspace }}/build_output/Win64/
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@main
