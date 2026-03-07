@@ -52,6 +52,17 @@ jobs:
                       --disable-http
           make -j$(nproc) install
 
+      - name: Build libopusenc
+        run: |
+          git clone https://github.com/xiph/libopusenc.git
+          cd libopusenc
+          git describe --tags --always > .tarball-version
+          ./autogen.sh
+          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
+          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+                      --enable-static --disable-shared
+          make -j$(nproc) install
+
       - name: Build opus-tools
         run: |
           git clone https://github.com/xiph/opus-tools.git
