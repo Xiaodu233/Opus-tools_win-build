@@ -40,6 +40,18 @@ jobs:
                       CFLAGS="-O2 -mavx2"
           make -j$(nproc) install
 
+      - name: Build libflac
+        run: |
+          git clone https://github.com/xiph/flac.git
+          cd flac
+          git describe --tags --always > .tarball-version
+          ./autogen.sh
+          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
+          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+                      --enable-static --disable-shared \
+                      --disable-cpplibs --disable-examples --disable-docs
+          make -j$(nproc) install
+
       - name: Build libopusfile
         run: |
           git clone https://github.com/xiph/opusfile.git
@@ -48,8 +60,7 @@ jobs:
           ./autogen.sh
           export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
           ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
-                      --enable-static --disable-shared \
-                      --disable-http
+                      --enable-static --disable-shared --disable-http
           make -j$(nproc) install
 
       - name: Build libopusenc
