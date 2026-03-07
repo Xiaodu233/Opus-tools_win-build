@@ -18,49 +18,55 @@ jobs:
           mkdir -p ${{ github.workspace }}/local_dist
           mkdir -p build_output/Win64
 
-      - name: Build libogg (Win64)
+      - name: Build libogg
         run: |
-          git clone --depth 1 https://github.com/xiph/ogg.git
+          git clone https://github.com/xiph/ogg.git
           cd ogg
+          git describe --tags --always > .tarball-version
           ./autogen.sh
           ./configure --host=x86_64-w64-mingw32 \
           --prefix=${{ github.workspace }}/local_dist \
           --enable-static --disable-shared
           make -j$(nproc) install
 
-      - name: Build libopus (Win64)
+      - name: Build libopus
         run: |
-          git clone https://github.com/xiph/opus.git opus-lib
-          cd opus-lib
-          
-          GIT_VER=$(git describe --tags --always --dirty)
-          echo "Building libopus version: $GIT_VER"
-          echo "$GIT_VER" > .tarball-version
-          
+          git clone https://github.com/xiph/opus.git
+          cd opus
+          git describe --tags --always > .tarball-version
           ./autogen.sh
-          ./configure --host=x86_64-w64-mingw32 \
-                      --prefix=${{ github.workspace }}/local_dist \
-                      --enable-static --disable-shared \
-                      --enable-osce --enable-dred \
+          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+                      --enable-static --disable-shared --enable-osce --enable-dred \
                       CFLAGS="-O2 -mavx2"
           make -j$(nproc) install
 
-      - name: Build opus-tools (Win64)
+      - name: Build libopusfile
+        run: |
+          git clone https://github.com/xiph/opusfile.git
+          cd opusfile
+          git describe --tags --always > .tarball-version
+          ./autogen.sh
+          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
+          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+                      --enable-static --disable-shared \
+                      --disable-http
+          make -j$(nproc) install
+
+      - name: Build opus-tools
         run: |
           git clone https://github.com/xiph/opus-tools.git
           cd opus-tools
-          
-          GIT_VER=$(git describe --tags --always --dirty)
-          echo "Building opus-tools version: $GIT_VER"
-          echo "$GIT_VER" > .tarball-version
-          
+          git describe --tags --always > .tarball-version
           ./autogen.sh
-          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
           
-          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2 -mavx2" LDFLAGS="-static"
+          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
+          export LDFLAGS="-L${{ github.workspace }}/local_dist/lib -static"
+          export CPPFLAGS="-I${{ github.workspace }}/local_dist/include"
+          
+          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2 -mavx2"
           make -j$(nproc)
-
-          cp opusenc.exe opusdec.exe opusinfo.exe ${{ github.workspace }}/build_output/Win64/
+          
+          cp *.exe ${{ github.workspace }}/build_output/Win64/
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@main
