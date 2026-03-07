@@ -13,42 +13,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mingw-w64 pkg-config autoconf automake libtool make zip
 
-      - name: Checkout opus-tools
-        uses: actions/checkout@main
-        with:
-          repository: xiph/opus-tools
-          path: opus-tools
-
-      - name: Checkout libopus
-        uses: actions/checkout@main
-        with:
-          repository: xiph/opus
-          ref: 'main'
-          path: opus-lib
-
-      - name: Create Output Folders
+      - name: Create Build Environment
         run: |
+          mkdir -p ${{ github.workspace }}/local_dist
           mkdir -p build_output/Win64
 
-      - name: Build Win64 (libopus + opus-tools)
+      - name: Build libogg (Win64)
         run: |
-          cd ${{ github.workspace }}/opus-lib
+          git clone --depth 1 https://github.com/xiph/ogg.git
+          cd ogg
           ./autogen.sh
-          ./configure --host=x86_64-w64-mingw32 --prefix=$(pwd)/dist-win64 \
-                      --enable-static --disable-shared --enable-osce --enable-dred \
-                      CFLAGS="-O2" || cat config.log
+          ./configure --host=x86_64-w64-mingw32 \
+                      --prefix=${{ github.workspace }}/local_dist \
+                      --enable-static --disable-shared
           make -j$(nproc) && make install
-          
-          cd ${{ github.workspace }}/opus-tools
+
+      - name: Build libopus (Win64)
+        run: |
+          git clone --depth 1 https://github.com/xiph/opus.git opus-lib
+          cd opus-lib
           ./autogen.sh
-          export PKG_CONFIG_PATH=${{ github.workspace }}/opus-lib/dist-win64/lib/pkgconfig
-          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2" || cat config.log
+          ./configure --host=x86_64-w64-mingw32 \
+                      --prefix=${{ github.workspace }}/local_dist \
+                      --enable-static --disable-shared \
+                      --enable-osce --enable-dred \
+                      CFLAGS="-O2 -mavx2" || cat config.log
+          make -j$(nproc) && make install
+
+      - name: Build opus-tools (Win64)
+        run: |
+          git clone --depth 1 https://github.com/xiph/opus-tools.git
+          cd opus-tools
+          ./autogen.sh
+          
+          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
+          export LDFLAGS="-L${{ github.workspace }}/local_dist/lib"
+          export CPPFLAGS="-I${{ github.workspace }}/local_dist/include"
+          
+          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2 -mavx2"
           make -j$(nproc)
+          
           cp *.exe ${{ github.workspace }}/build_output/Win64/
-          make clean
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@main
         with:
-          name: opus-tools-binaries
+          name: opus-tools-win64
           path: build_output/
