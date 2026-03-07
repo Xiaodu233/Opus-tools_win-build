@@ -83,10 +83,13 @@ jobs:
           ./autogen.sh
           
           export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
+          export CPPFLAGS="-I${{ github.workspace }}/local_dist/include -DFLAC__NO_DLL"
           export LDFLAGS="-L${{ github.workspace }}/local_dist/lib -static"
-          export CPPFLAGS="-I${{ github.workspace }}/local_dist/include"
+          export LIBS="-logg"
           
-          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2 -mavx2"
+          ./configure --host=x86_64-w64-mingw32 CFLAGS="-O2 -mavx2" \
+                      FLAC_CFLAGS="-I${{ github.workspace }}/local_dist/include -DFLAC__NO_DLL" \
+                      FLAC_LIBS="-L${{ github.workspace }}/local_dist/lib -lFLAC -logg"
           make -j$(nproc)
           
           cp *.exe ${{ github.workspace }}/build_output/Win64/
