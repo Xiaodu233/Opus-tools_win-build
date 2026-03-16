@@ -95,12 +95,11 @@ jobs:
           
           export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
           export CPPFLAGS="-I${{ github.workspace }}/local_dist/include -DFLAC__NO_DLL"
-          export LDFLAGS="-L${{ github.workspace }}/local_dist/lib -static"
           export LIBS="-logg"
           
           ./configure --host=x86_64-w64-mingw32 \
                       CFLAGS="-O3 -march=x86-64-v3 -flto -ffunction-sections -fdata-sections" \
-                      LDFLAGS="-flto -Wl,--gc-sections -Wl,-O1" \
+                      LDFLAGS="-L${{ github.workspace }}/local_dist/lib -static -flto -Wl,--gc-sections -Wl,-O1" \
                       FLAC_CFLAGS="-I${{ github.workspace }}/local_dist/include -DFLAC__NO_DLL" \
                       FLAC_LIBS="-L${{ github.workspace }}/local_dist/lib -lFLAC -logg"
           make -j$(nproc)
