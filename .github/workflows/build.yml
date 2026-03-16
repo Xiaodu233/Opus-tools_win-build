@@ -6,6 +6,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GE_CFLAGS: "-O3 -march=x86-64-v3 -flto=auto -ffast-math -ffunction-sections -fdata-sections -pipe"
+      GE_LDFLAGS: "-static -flto=auto -Wl,--gc-sections -Wl,-O1 -s"
+      LOCAL_PATH: "${{ github.workspace }}/local_dist"
+      PKG_CONFIG_PATH: "${{ github.workspace }}/local_dist/lib/pkgconfig"
 
     steps:
       - name: Install Toolchain
@@ -15,7 +20,7 @@ jobs:
 
       - name: Create Build Environment
         run: |
-          mkdir -p ${{ github.workspace }}/local_dist
+          mkdir -p $LOCAL_PATH
           mkdir -p build_output/Win64
 
       - name: Build libogg
@@ -24,10 +29,9 @@ jobs:
           cd ogg
           git describe --tags --always > .tarball-version
           ./autogen.sh
-          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+          ./configure --host=x86_64-w64-mingw32 --prefix=$LOCAL_PATH \
                       --enable-static --disable-shared \
-                      CFLAGS="-O3 -march=x86-64-v3 -flto -ffunction-sections -fdata-sections" \
-                      LDFLAGS="-flto -Wl,--gc-sections -Wl,-O1"
+                      CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
 
       - name: Build libopus
@@ -36,11 +40,10 @@ jobs:
           cd opus
           git describe --tags --always > .tarball-version
           ./autogen.sh
-          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
-                      --enable-static --disable-shared --enable-osce --enable-dred --enable-qext\
-                      --disable-doc --disable-extra-programs --disable-rtcd --disable-intrinsics\
-                      CFLAGS="-O3 -march=x86-64-v3 -flto -ffunction-sections -fdata-sections" \
-                      LDFLAGS="-flto -Wl,--gc-sections -Wl,-O1"
+          ./configure --host=x86_64-w64-mingw32 --prefix=$LOCAL_PATH \
+                      --enable-static --disable-shared --enable-osce --enable-dred \
+                      --enable-qext --disable-doc --disable-extra-programs \
+                      CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
 
       - name: Build libflac
@@ -50,12 +53,10 @@ jobs:
           git describe --tags --always > .tarball-version
           libtoolize --force
           ./autogen.sh
-          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
-          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+          ./configure --host=x86_64-w64-mingw32 --prefix=$LOCAL_PATH \
                       --enable-static --disable-shared --disable-cpplibs --disable-examples \
                       --disable-doxygen-docs --disable-thorough-tests \
-                      CFLAGS="-O3 -march=x86-64-v3 -flto -ffunction-sections -fdata-sections" \
-                      LDFLAGS="-flto -Wl,--gc-sections -Wl,-O1"
+                      CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
 
       - name: Build libopusfile
@@ -64,12 +65,10 @@ jobs:
           cd opusfile
           git describe --tags --always > .tarball-version
           ./autogen.sh
-          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
-          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+          ./configure --host=x86_64-w64-mingw32 --prefix=$LOCAL_PATH \
                       --enable-static --disable-shared --disable-http \
                       --disable-examples --disable-doc \
-                      CFLAGS="-O3 -march=x86-64-v3 -flto -ffunction-sections -fdata-sections" \
-                      LDFLAGS="-flto -Wl,--gc-sections -Wl,-O1"
+                      CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
 
       - name: Build libopusenc
@@ -78,12 +77,10 @@ jobs:
           cd libopusenc
           git describe --tags --always > .tarball-version
           ./autogen.sh
-          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
-          ./configure --host=x86_64-w64-mingw32 --prefix=${{ github.workspace }}/local_dist \
+          ./configure --host=x86_64-w64-mingw32 --prefix=$LOCAL_PATH \
                       --enable-static --disable-shared \
                       --disable-examples --disable-doc \
-                      CFLAGS="-O3 -march=x86-64-v3 -flto -ffunction-sections -fdata-sections" \
-                      LDFLAGS="-flto -Wl,--gc-sections -Wl,-O1"
+                      CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
 
       - name: Build opus-tools
@@ -93,18 +90,32 @@ jobs:
           git describe --tags --always > .tarball-version
           ./autogen.sh
           
-          export PKG_CONFIG_PATH=${{ github.workspace }}/local_dist/lib/pkgconfig
-          export CPPFLAGS="-I${{ github.workspace }}/local_dist/include -DFLAC__NO_DLL"
+          export CPPFLAGS="-I$LOCAL_PATH/include -DFLAC__NO_DLL"
           export LIBS="-logg"
           
-          ./configure --host=x86_64-w64-mingw32 \
-                      CFLAGS="-O3 -march=x86-64-v3 -flto -ffunction-sections -fdata-sections" \
-                      LDFLAGS="-L${{ github.workspace }}/local_dist/lib -static -flto -Wl,--gc-sections -Wl,-O1" \
-                      FLAC_CFLAGS="-I${{ github.workspace }}/local_dist/include -DFLAC__NO_DLL" \
-                      FLAC_LIBS="-L${{ github.workspace }}/local_dist/lib -lFLAC -logg"
+          ./configure --host=x86_64-w64-mingw32 CFLAGS="$GE_CFLAGS" \
+                      LDFLAGS="-L$LOCAL_PATH/lib $GE_LDFLAGS"\
+                      FLAC_CFLAGS="-I$LOCAL_PATH/include -DFLAC__NO_DLL" \
+                      FLAC_LIBS="-L$LOCAL_PATH/lib -lFLAC -logg"
           make -j$(nproc)
           
           cp *.exe ${{ github.workspace }}/build_output/Win64/
+
+      - name: Verify Binaries
+        run: |
+          cd build_output/Win64
+          echo "=== 1. 检查文件大小与列表 ==="
+          ls -lh
+          
+          echo -e "\n=== 2. 指令集验证 (检索 AVX2 特有指令) ==="
+          if x86_64-w64-mingw32-objdump -d opusenc.exe | grep -E "vpsllv|vpermd|vpbroadcast" | head -n 5; then
+            echo "SUCCESS: AVX2 (x86-64-v3) instructions detected!"
+          else
+            echo "WARNING: AVX2 instructions NOT found. Check compiler flags."
+          fi
+
+          echo -e "\n=== 3. 版本号验证 (查看内置字符串) ==="
+          strings opusenc.exe | grep -E "opus-tools|libopus" | head -n 3
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@main
