@@ -110,7 +110,7 @@ jobs:
           TOOLS_VER=$(cat opus-tools/.tarball-version)
           OPUS_VER=$(cat opus/.tarball-version)
           echo "RELEASE_BODY=opus-tools $TOOLS_VER (using libopus $OPUS_VER)" >> $GITHUB_OUTPUT
-          echo "TAG_NAME=$(date +'%y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=$(TZ=UTC-8 date +'%y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
           
           cd build_output
           zip -r ../../opus-tools-win64 .
