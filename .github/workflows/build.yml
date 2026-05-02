@@ -122,4 +122,4 @@ jobs:
           tag_name: ${{ steps.info.outputs.TAG_NAME }}
           body: ${{ steps.info.outputs.RELEASE_BODY }}
           name: ${{ steps.info.outputs.TAG_NAME }}
-          files: build_output/opus-tools-win64.zip
+          files: opus-tools-win64.zip
