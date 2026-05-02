@@ -3,6 +3,9 @@ name: Opus-tools Win64 Build
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,15 +16,13 @@ jobs:
       PKG_CONFIG_PATH: "${{ github.workspace }}/local_dist/lib/pkgconfig"
 
     steps:
-      - name: Install Toolchain
+      - name: Prepare Build Environment
         run: |
           sudo apt-get update
           sudo apt-get install -y mingw-w64 pkg-config autoconf automake libtool-bin gettext make zip
-
-      - name: Create Build Environment
-        run: |
+          
           mkdir -p $LOCAL_PATH
-          mkdir -p build_output/Win64
+          mkdir -p build_output
 
       - name: Build libogg
         run: |
@@ -46,7 +47,7 @@ jobs:
                       CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
           
-          cp *.exe ${{ github.workspace }}/build_output/Win64/
+          cp opus_demo.exe ${{ github.workspace }}/build_output/
 
       - name: Build libflac
         run: |
@@ -101,26 +102,25 @@ jobs:
                       FLAC_LIBS="-L$LOCAL_PATH/lib -lFLAC -logg"
           make -j$(nproc)
           
-          cp *.exe ${{ github.workspace }}/build_output/Win64/
+          cp *.exe ${{ github.workspace }}/build_output/
 
-      - name: Verify Binaries
+      - name: Prepare Release Info
+        id: info
         run: |
-          cd build_output/Win64
-          echo "=== 1. 检查文件大小与列表 ==="
-          ls -lh
+          echo "TAG_NAME=$(date +'%y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
           
-          echo -e "\n=== 2. 指令集验证 (检索 AVX2 特有指令) ==="
-          if x86_64-w64-mingw32-objdump -d opusenc.exe | grep -E "vpsllv|vpermd|vpbroadcast" | head -n 5; then
-            echo "SUCCESS: AVX2 (x86-64-v3) instructions detected!"
-          else
-            echo "WARNING: AVX2 instructions NOT found. Check compiler flags."
-          fi
+          TOOLS_VER=$(cat opus-tools/.tarball-version)
+          OPUS_VER=$(cat opus-lib/.tarball-version)
+          echo "RELEASE_BODY=opus-tools $TOOLS_VER (using libopus $OPUS_VER)" >> $GITHUB_OUTPUT
+          
+          echo "Build Complete."
+          echo "Tools Version: $TOOLS_VER"
+          echo "Opus Version: $OPUS_VER"
 
-          echo -e "\n=== 3. 版本号验证 (查看内置字符串) ==="
-          strings opusenc.exe | grep -E "opus-tools|libopus" | head -n 3
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@main
+      - name: Release Binaries
+        uses: softprops/action-gh-release@master
         with:
-          name: opus-tools-win64
-          path: build_output/
+          tag_name: ${{ steps.info.outputs.TAG_NAME }}
+          body: ${{ steps.info.outputs.RELEASE_BODY }}
+          files:: build_output/*.exe
+          name: Opus-tools-win64
