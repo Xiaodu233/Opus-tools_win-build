@@ -113,8 +113,8 @@ jobs:
           echo "TAG_NAME=$(TZ=UTC-8 date +'%y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
           
           cd build_output
-          zip -r ../../opus-tools-win64.zip .
-          cd ../..
+          zip -r ../opus-tools-win64.zip .
+          cd ..
 
       - name: Release Binaries
         uses: softprops/action-gh-release@master
