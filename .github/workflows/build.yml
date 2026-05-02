@@ -16,7 +16,7 @@ jobs:
       PKG_CONFIG_PATH: "${{ github.workspace }}/local_dist/lib/pkgconfig"
 
     steps:
-      - name: Prepare Build Environment
+      - name: Prepare Environment
         run: |
           sudo apt-get update
           sudo apt-get install -y mingw-w64 pkg-config autoconf automake libtool-bin gettext make zip
@@ -47,7 +47,7 @@ jobs:
                       CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
           
-          cp opus_demo.exe ${{ github.workspace }}/build_output/
+          cp opus_demo.exe ${{ github.workspace }}/build_output
 
       - name: Build libflac
         run: |
@@ -102,25 +102,24 @@ jobs:
                       FLAC_LIBS="-L$LOCAL_PATH/lib -lFLAC -logg"
           make -j$(nproc)
           
-          cp *.exe ${{ github.workspace }}/build_output/
+          cp *.exe ${{ github.workspace }}/build_output
 
-      - name: Prepare Release Info
+      - name: Prepare Release
         id: info
         run: |
-          echo "TAG_NAME=$(date +'%y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
-          
           TOOLS_VER=$(cat opus-tools/.tarball-version)
           OPUS_VER=$(cat opus/.tarball-version)
           echo "RELEASE_BODY=opus-tools $TOOLS_VER (using libopus $OPUS_VER)" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=$(date +'%y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
           
-          echo "Build Complete."
-          echo "Tools Version: $TOOLS_VER"
-          echo "Opus Version: $OPUS_VER"
+          cd build_output
+          zip -r ../../opus-tools-win64 .
+          cd ../..
 
       - name: Release Binaries
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{ steps.info.outputs.TAG_NAME }}
           body: ${{ steps.info.outputs.RELEASE_BODY }}
-          files: build_output/*.exe
-          name: Opus-tools-win64
+          name: ${{ steps.info.outputs.TAG_NAME }}
+          files: build_output/opus-tools-win64.zip
