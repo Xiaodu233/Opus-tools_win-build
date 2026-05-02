@@ -122,5 +122,5 @@ jobs:
         with:
           tag_name: ${{ steps.info.outputs.TAG_NAME }}
           body: ${{ steps.info.outputs.RELEASE_BODY }}
-          files:: build_output/*.exe
+          files: build_output/*.exe
           name: Opus-tools-win64
