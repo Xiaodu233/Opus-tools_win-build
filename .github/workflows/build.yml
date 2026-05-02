@@ -42,9 +42,11 @@ jobs:
           ./autogen.sh
           ./configure --host=x86_64-w64-mingw32 --prefix=$LOCAL_PATH \
                       --enable-static --disable-shared --enable-osce --enable-dred \
-                      --enable-qext --disable-doc --disable-extra-programs \
+                      --enable-qext --disable-doc \
                       CFLAGS="$GE_CFLAGS" LDFLAGS="$GE_LDFLAGS"
           make -j$(nproc) install
+          
+          cp *.exe ${{ github.workspace }}/build_output/Win64/
 
       - name: Build libflac
         run: |
